@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JSON & URL Encoded</title>
+</head>
+<body style="text-align:center;">
+
+  <h2>JSON → URL Encoded</h2>
+  <textarea id="jsonInput" rows="5" cols="45"></textarea>
+  <br>
+  <button onclick="jsonToUrl()">Convert to URL Encoded</button>
+  <h3>Output (click to copy):</h3>
+  <pre id="urlOutput" onclick="copyToClipboard('urlOutput')"></pre>
+
+  <hr style="width:50%;">
+
+  <h2>URL Encoded → JSON</h2>
+  <textarea id="urlInput" rows="5" cols="45"></textarea>
+  <br>
+  <button onclick="urlToJson()">Convert to JSON</button>
+  <h3>Output (click to copy):</h3>
+  <pre id="jsonOutput" onclick="copyToClipboard('jsonOutput')"></pre>
+
+  <script>
+    function jsonToUrl() {
+      const input = document.getElementById('jsonInput').value.trim();
+      const output = document.getElementById('urlOutput');
+      try {
+        const data = JSON.parse(input);
+        const params = new URLSearchParams();
+        for (const key in data) {
+          params.append(key, typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key]);
+        }
+        output.textContent = params.toString();
+      } catch (err) {
+        output.textContent = 'Invalid JSON: ' + err.message;
+      }
+    }
+
+    function urlToJson() {
+      const input = document.getElementById('urlInput').value.trim();
+      const output = document.getElementById('jsonOutput');
+      try {
+        const params = new URLSearchParams(input);
+        const obj = {};
+        for (const [key, value] of params.entries()) {
+          try {
+            obj[key] = JSON.parse(value);
+          } catch {
+            obj[key] = value;
+          }
+        }
+        output.textContent = JSON.stringify(obj, null, 2);
+      } catch (err) {
+        output.textContent = 'Invalid URL encoded data: ' + err.message;
+      }
+    }
+
+    function copyToClipboard(id) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text)
+        .then(() => alert('Copied to clipboard!'))
+        .catch(() => alert('Failed to copy.'));
+    }
+  </script>
+</body>
+</html>

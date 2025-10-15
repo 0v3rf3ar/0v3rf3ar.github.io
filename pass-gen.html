@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Password Generator</title>
+</head>
+<body>
+  <center>
+    <h1>Password Generator</h1>
+
+    <p>
+      <label for="length"><strong>Length</strong></label><br>
+      <input id="length" type="number" min="1" max="128" value="32" />
+      <input id="lengthRange" type="range" min="1" max="128" value="32" />
+    </p>
+
+    <p><strong>Include</strong></p>
+    <p>
+      <label><input id="lower" type="checkbox" checked> Lowercase (a-z)</label><br>
+      <label><input id="upper" type="checkbox" checked> Uppercase (A-Z)</label><br>
+      <label><input id="numbers" type="checkbox" checked> Numbers (0-9)</label><br>
+      <label><input id="specials" type="checkbox" checked> Special characters (!@#$%^&*...)</label><br>
+      <label><input id="avoidAmbiguous" type="checkbox"> Avoid ambiguous (i, l, 1, O, 0)</label>
+    </p>
+
+    <p>
+      <button id="generateBtn" type="button">Generate</button>
+      <button id="copyBtn" type="button">Copy</button>
+      <button id="regenBtn" type="button">Generate & Focus</button>
+    </p>
+
+    <p>
+      <label for="password"><strong>Generated password</strong></label><br>
+      <input id="password" type="text" readonly size="48" />
+    </p>
+
+    <p id="meta"><small></small></p>
+
+    <p><small>Default length is 32 and includes lower/upper/numbers/specials.</small></p>
+  </center>
+
+<script>
+(function(){
+  // Character sets
+  const LOWER = 'abcdefghijklmnopqrstuvwxyz';
+  const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const NUMS  = '0123456789';
+  const SPECIALS = '!@#$%^&*()-_+=[]{}|;:,.<>?/`~"\\';
+  const AMBIGUOUS = 'il1Lo0O';
+
+  // Elements
+  const lengthInput = document.getElementById('length');
+  const lengthRange = document.getElementById('lengthRange');
+  const lowerChk = document.getElementById('lower');
+  const upperChk = document.getElementById('upper');
+  const numsChk = document.getElementById('numbers');
+  const specialsChk = document.getElementById('specials');
+  const avoidAmbiguousChk = document.getElementById('avoidAmbiguous');
+  const passwordField = document.getElementById('password');
+  const generateBtn = document.getElementById('generateBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const regenBtn = document.getElementById('regenBtn');
+  const meta = document.getElementById('meta');
+
+  // sync range and number input
+  function syncLength(e){
+    const v = Math.max(1, Math.min(128, Number(lengthInput.value) || 32));
+    lengthInput.value = v;
+    lengthRange.value = v;
+  }
+  lengthInput.addEventListener('input', syncLength);
+  lengthRange.addEventListener('input', function(){ lengthInput.value = lengthRange.value; });
+
+  // generate password
+  function generatePassword() {
+    const length = Math.max(1, Math.min(128, Number(lengthInput.value) || 32));
+    let charset = '';
+    if (lowerChk.checked) charset += LOWER;
+    if (upperChk.checked) charset += UPPER;
+    if (numsChk.checked)  charset += NUMS;
+    if (specialsChk.checked) charset += SPECIALS;
+
+    if (!charset) {
+      alert('Please select at least one character set (lowercase, uppercase, numbers or specials).');
+      return '';
+    }
+
+    // optionally remove ambiguous characters
+    if (avoidAmbiguousChk.checked) {
+      const filtered = [];
+      for (let i = 0; i < charset.length; i++) {
+        if (AMBIGUOUS.indexOf(charset[i]) === -1) filtered.push(charset[i]);
+      }
+      charset = filtered.join('');
+      if (!charset) {
+        alert('All characters were filtered out by the "avoid ambiguous" option. Uncheck it or enable more character sets.');
+        return '';
+      }
+    }
+
+    // Guarantee inclusion: to avoid edge case where some selected classes aren't present,
+    // we first ensure at least one character from each selected class is included, then fill the rest.
+    const pools = [];
+    if (lowerChk.checked) pools.push(LOWER);
+    if (upperChk.checked) pools.push(UPPER);
+    if (numsChk.checked)  pools.push(NUMS);
+    if (specialsChk.checked) pools.push(SPECIALS);
+
+    // If avoid ambiguous, filter the pools individually
+    const effectivePools = pools.map(pool => {
+      if (!avoidAmbiguousChk.checked) return pool;
+      return pool.split('').filter(ch => AMBIGUOUS.indexOf(ch) === -1).join('');
+    });
+
+    // Build result array
+    const result = [];
+    // First, guarantee one char from each selected non-empty pool (if length allows)
+    for (let i = 0; i < effectivePools.length && result.length < length; i++) {
+      const p = effectivePools[i];
+      if (p.length === 0) continue;
+      result.push(p[randomInt(0, p.length)]);
+    }
+
+    // Fill remaining characters
+    for (let i = result.length; i < length; i++) {
+      result.push(charset[randomInt(0, charset.length)]);
+    }
+
+    // Shuffle the result to mix guaranteed chars
+    shuffleArray(result);
+
+    const pwd = result.join('');
+    passwordField.value = pwd;
+    updateMeta(pwd, charset.length, length);
+    return pwd;
+  }
+
+  // random int [0, max)
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  }
+
+  // Fisher-Yates shuffle
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = arr[i];
+      arr[i] = arr[j];
+      arr[j] = t;
+    }
+  }
+
+  // entropy estimate (bits) = length * log2(poolSize)
+  function updateMeta(pwd, poolSize, length) {
+    const bits = length * Math.log2(Math.max(2, poolSize));
+    const bitsRounded = Math.round(bits * 10) / 10;
+    const strength = bits >= 128 ? 'Very strong' : bits >= 80 ? 'Strong' : bits >= 60 ? 'Good' : bits >= 40 ? 'Weak' : 'Very weak';
+    meta.innerHTML = '<small>Entropy estimate: ' + bitsRounded + ' bits — ' + strength + '</small>';
+  }
+
+  // Copy to clipboard
+  function copyToClipboard() {
+    const txt = passwordField.value;
+    if (!txt) {
+      alert('No password to copy. Generate one first.');
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function(){
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1000);
+      }, function(){
+        fallbackCopy(txt);
+      });
+    } else {
+      fallbackCopy(txt);
+    }
+  }
+
+  function fallbackCopy(text) {
+    // older fallback
+    passwordField.select();
+    try {
+      const ok = document.execCommand('copy');
+      if (ok) {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1000);
+      } else {
+        alert('Copy failed — select and copy manually.');
+      }
+    } catch (e) {
+      alert('Copy not supported. Select and copy manually.');
+    }
+  }
+
+  // Event listeners
+  generateBtn.addEventListener('click', generatePassword);
+  regenBtn.addEventListener('click', function(){ generatePassword(); passwordField.focus(); passwordField.select(); });
+  copyBtn.addEventListener('click', copyToClipboard);
+
+  // Generate default on load
+  window.addEventListener('load', function(){ generatePassword(); });
+})();
+</script>
+</body>
+</html>

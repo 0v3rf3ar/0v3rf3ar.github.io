@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dorky v2.0</title>
+</head>
+<body>
+  <center>
+    <h1>Dorky</h1>
+
+    <p>
+      <label for="domain"><strong>Domain</strong></label><br />
+      <input id="domain" name="domain" placeholder="example.com" />
+    </p>
+
+    <p>
+      <button type="button" onclick="generateLinks()">Generate Links</button>
+    </p>
+
+    <p><small>Tip: enter only the domain (e.g. <code>example.com</code>). Results open in new tabs.</small></p>
+
+    <fieldset>
+      <legend>Search Engines</legend>
+
+      <fieldset>
+        <legend>Google</legend>
+        <div id="google" aria-live="polite"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>DuckDuckGo</legend>
+        <div id="duckduckgo" aria-live="polite"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Bing</legend>
+        <div id="bing" aria-live="polite"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Yandex</legend>
+        <div id="yandex" aria-live="polite"></div>
+      </fieldset>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dev / Security</legend>
+
+      <fieldset>
+        <legend>Shodan</legend>
+        <div id="shodan" aria-live="polite"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Censys</legend>
+        <div id="censys" aria-live="polite"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Other Useful Assets</legend>
+        <div id="other" aria-live="polite"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Wayback / Archive</legend>
+        <div id="archive" aria-live="polite"></div>
+      </fieldset>
+    </fieldset>
+
+    <p><small>Generated links open in a new tab/window. Some services may require an account.</small></p>
+  </center>
+
+<script>
+  function generateLinks() {
+    var domainInput = document.getElementById('domain').value.trim();
+    if (!domainInput) {
+      alert('Please enter a domain (e.g. example.com).');
+      return;
+    }
+
+    // Normalize domain: remove protocol and path
+    var domain = domainInput.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+
+    // --- Dorks / queries ---
+    var google_dorks = [
+      'site:' + domain,
+      'site:' + domain + ' inurl:apidocs | inurl:api-docs | inurl:swagger | inurl:api-explorer',
+      'site:' + domain + ' inurl:config | inurl:env | inurl:setting | inurl:backup | inurl:admin | inurl:php',
+      'site:' + domain + ' ext:log | ext:txt | ext:conf | ext:ini | ext:env | ext:bak | ext:backup | ext:old | ext:git | ext:svn | ext:htaccess | ext:xml',
+      'site:' + domain + ' inurl:login | inurl:auth | inurl:signin | intitle:signin',
+      'site:' + domain + ' ext:sql | ext:dbf | ext:mdb',
+      'site:' + domain + ' intitle:"Welcome to Nginx"',
+      'site:' + domain + ' inurl:(unsubscribe|register|feedback|signup|join|contact|profile|user|comment|api|developer|affiliate|upload|mobile|upgrade|password)',
+      'site:openbugbounty.org inurl:reports intext:' + domain
+    ];
+
+    var duckduckgo_dorks = ['site:' + domain];
+    var bing_dorks = ['site:' + domain];
+    var yandex_dorks = ['site:' + domain];
+
+    // Shodan
+    var shodan_templates = [
+      { label: 'Shodan — Domain info', url: d => 'https://www.shodan.io/domain/' + encodeURIComponent(d) },
+      { label: 'Shodan — Title search (title:"' + domain + '")', url: d => 'https://www.shodan.io/search?query=' + encodeURIComponent('title:"' + d + '"') },
+      { label: 'Shodan — SSL cert CN search', url: d => 'https://www.shodan.io/search?query=' + encodeURIComponent('ssl.cert.subject.CN:"' + d + '"') }
+    ];
+
+    // Censys
+    var censys_templates = [
+      { label: 'Censys — Hosts search', url: d => 'https://search.censys.io/hosts?q=' + encodeURIComponent(d) },
+      { label: 'Censys — Certificates search', url: d => 'https://search.censys.io/certificates?q=' + encodeURIComponent(d) }
+    ];
+
+    // Other useful assets
+    var other_templates = [
+      { label: 'GitHub — Code search', url: d => 'https://github.com/search?q=' + encodeURIComponent(d) },
+      { label: 'crt.sh — Certificate transparency', url: d => 'https://crt.sh/?q=' + encodeURIComponent(d) },
+      { label: 'URLScan — Public scans', url: d => 'https://urlscan.io/search/#q=' + encodeURIComponent(d) },
+      { label: 'SecurityTrails — Domain info', url: d => 'https://securitytrails.com/domain/' + encodeURIComponent(d) },
+      { label: 'BuiltWith — Technology lookup', url: d => 'https://builtwith.com/' + encodeURIComponent(d) },
+      { label: 'ViewDNS — Reverse IP lookup', url: d => 'https://viewdns.info/reverseip/?host=' + encodeURIComponent(d) },
+      { label: 'Hunter.io — Find emails', url: d => 'https://hunter.io/search/' + encodeURIComponent(d) }
+    ];
+
+    // --- Helpers ---
+    function populateFromQueries(containerId, queries, buildUrlFn) {
+      var container = document.getElementById(containerId);
+      container.innerHTML = '';
+      queries.forEach(function(q) {
+        var a = document.createElement('a');
+        a.href = buildUrlFn(q);
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = q;
+        container.appendChild(a);
+        container.appendChild(document.createElement('br'));
+      });
+      if (!queries.length) container.textContent = '— none —';
+    }
+
+    function populateFromTemplates(containerId, templates, d) {
+      var container = document.getElementById(containerId);
+      container.innerHTML = '';
+      templates.forEach(function(t) {
+        var a = document.createElement('a');
+        a.href = t.url(d);
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = t.label;
+        container.appendChild(a);
+        container.appendChild(document.createElement('br'));
+      });
+      if (!templates.length) container.textContent = '— none —';
+    }
+
+    // Populate search engines
+    populateFromQueries('google', google_dorks, q => 'https://www.google.com/search?q=' + encodeURIComponent(q));
+    populateFromQueries('duckduckgo', duckduckgo_dorks, q => 'https://duckduckgo.com/?q=' + encodeURIComponent(q));
+    populateFromQueries('bing', bing_dorks, q => 'https://www.bing.com/search?q=' + encodeURIComponent(q));
+    populateFromQueries('yandex', yandex_dorks, q => 'https://yandex.com/search/?text=' + encodeURIComponent(q));
+
+    // Security assets
+    populateFromTemplates('shodan', shodan_templates, domain);
+    populateFromTemplates('censys', censys_templates, domain);
+    populateFromTemplates('other', other_templates, domain);
+
+    // Archive / Wayback
+    var archiveDiv = document.getElementById('archive');
+    archiveDiv.innerHTML = '';
+    var archiveQuery = 'https://web.archive.org/cdx/search/cdx?url=https://' + encodeURIComponent(domain) + '/.*&fl=original&collapse=urlkey';
+    var a = document.createElement('a');
+    a.href = archiveQuery;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = archiveQuery;
+    archiveDiv.appendChild(a);
+    archiveDiv.appendChild(document.createElement('br'));
+  }
+</script>
+</body>
+</html>
