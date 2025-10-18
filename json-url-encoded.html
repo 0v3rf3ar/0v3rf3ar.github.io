@@ -10,8 +10,7 @@
   <textarea id="jsonInput" rows="5" cols="45"></textarea>
   <br>
   <button onclick="jsonToUrl()">Convert to URL Encoded</button>
-  <h3>Output (click to copy):</h3>
-  <pre id="urlOutput" onclick="copyToClipboard('urlOutput')"></pre>
+  <pre id="urlOutput" onclick="copyToClipboard('urlOutput')" onmouseover="setPointer(this, true)" onmouseout="setPointer(this, false)"></pre>
 
   <hr style="width:50%;">
 
@@ -19,8 +18,7 @@
   <textarea id="urlInput" rows="5" cols="45"></textarea>
   <br>
   <button onclick="urlToJson()">Convert to JSON</button>
-  <h3>Output (click to copy):</h3>
-  <pre id="jsonOutput" onclick="copyToClipboard('jsonOutput')"></pre>
+  <pre id="jsonOutput" onclick="copyToClipboard('jsonOutput')" onmouseover="setPointer(this, true)" onmouseout="setPointer(this, false)"></pre>
 
   <script>
     function jsonToUrl() {
@@ -63,6 +61,10 @@
         .then(() => alert('Copied to clipboard!'))
         .catch(() => alert('Failed to copy.'));
     }
+     function setPointer(element, isHover) {
+      element.style.cursor = isHover ? "pointer" : "default";
+    }
   </script>
 </body>
 </html>
+
